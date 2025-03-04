@@ -1,0 +1,9 @@
+# Editor directories and files
+.vscode
+
+__keep/
+build/
+dist/
+node_modules/
+
+

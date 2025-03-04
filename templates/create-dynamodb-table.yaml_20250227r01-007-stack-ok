@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Generates DynamoDB tables with a given base name
+
+Parameters:
+  #=======================================================
+  #
+  #                   CloudFormation Parameters
+  #
+  #=======================================================
+  DynamodbAccountsTableName:
+    Type: String
+    Description: DynamoDB Accounts Table Name
+
+  DynamodbDdataTableName:
+    Type: String
+    Description: DynamoDB Device Data Table Name
+
+  DynamodbDevicesTableName:
+    Type: String
+    Description: DynamoDB Devices Table Name
+
+  DynamodbDgroupsTableName:
+    Type: String
+    Description: DynamoDB Device Groups Table Name
+
+Resources:
+  #=======================================================
+  #
+  #             Dynamo SIM table resources
+  #
+  #=======================================================
+  DynamodbAccountsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: account_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: account_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TableName:
+        Ref: DynamodbAccountsTableName
+
+  DynamodbDdataTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: device_id
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: device_id
+          KeyType: HASH
+        - AttributeName: createdAt
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      TableName:
+        Ref: DynamodbDdataTableName
+
+  DynamodbDevicesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: device_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: device_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TableName:
+        Ref: DynamodbDevicesTableName
+
+  DynamodbDgroupsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: dgroup_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: dgroup_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TableName:
+        Ref: DynamodbDgroupsTableName
+
+Outputs:
+  #=======================================================
+  #
+  #                 CloudFormation Outputs
+  #
+  #=======================================================
+  DynamodbDdataTableName:
+    Description: The name of Device Data Table
+    Value:
+      Ref: DynamodbDdataTable
+
+  DynamodbDdataTableArn:
+    Description: The ARN of Device Data Table
+    Value:
+      Fn::GetAtt:
+        - DynamodbDdataTable
+        - Arn

@@ -1,0 +1,17 @@
+version: V1.0.0
+
+snsSuccessTopicName: iotcore-to-dynamodb-success
+snsFailureTopicName: iotcore-to-dynamodb-failure
+
+dev:
+  codeBaseBucket: amplifyapp-vue-rest-hkt-annexed-templates
+  codeBaseBucketRegion: ap-northeast-1
+
+staging:
+  codeBaseBucket: amplifyapp-vue-rest-hkt-annexed-templates
+  codeBaseBucketRegion: ap-northeast-1
+
+test:
+  codeBaseBucket: amplifyapp-vue-rest-hkt-annexed-templates
+  codeBaseBucketRegion: ap-northeast-1
+

@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Generates SQS queues
+
+Resources:
+  #=======================================================
+  #
+  #             SQS Queue resources
+  #
+  #=======================================================
+  SqsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      ContentBasedDeduplication: false
+      DelaySeconds: 0
+      FifoQueue: true
+      MaximumMessageSize: 262144
+      MessageRetentionPeriod: 345600
+      ReceiveMessageWaitTimeSeconds: 0
+      VisibilityTimeout: 30
+      QueueName: sqs-queue.fifo
+
+Outputs:
+  #=======================================================
+  #
+  #                 CloudFormation Outputs
+  #
+  #=======================================================
+  SqsQueueURL:
+    Description: URL of SQS Queue
+    Value:
+      Ref: SqsQueue
+  SqsQueueArn:
+    Description: ARN of SQS Queue
+    Value:
+      Fn::GetAtt:
+        - SqsQueue
+        - Arn

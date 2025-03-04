@@ -1,0 +1,152 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Sns topics for onboarding notifications
+
+Parameters:
+  #=======================================================
+  #
+  #            CloudFormation Parameters
+  #
+  #=======================================================
+  SnsSuccessTopicName:
+    Description: Name for Sns where the onboarding success events will be published
+    Type: String
+
+  SnsFailureTopicName:
+    Description: Name for Sns where the onboarding failures will be published
+    Type: String
+
+  SnsSuccessTopicSubscriptionEmail:
+    Description: Email for Success Topic Subscription. Empty string or valid e-mail. Verbose!
+    Type: String
+    AllowedPattern: ^$|[^\s@]+@[^\s@]+\.[^\s@]+
+
+  SnsFailureTopicSubscriptionEmail:
+    Description: Email for Failure Topic Subscription. Empty string or valid e-mail.
+    Type: String
+    AllowedPattern: ^$|[^\s@]+@[^\s@]+\.[^\s@]+
+
+Conditions:
+  #=======================================================
+  #
+  #            Conditions
+  #
+  #=======================================================
+  SnsSuccessTopicSubscriptionEmailExists:
+    Fn::Not:
+      - Fn::Equals:
+        - Ref: SnsSuccessTopicSubscriptionEmail
+        - ""
+
+  SnsFailureTopicSubscriptionEmailExists:
+    Fn::Not:
+    - Fn::Equals:
+        - Ref: SnsFailureTopicSubscriptionEmail
+        - ""
+
+Resources:
+  #=======================================================
+  #
+  #             Sns resources
+  #
+  #=======================================================
+  SnsSuccessTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Ref: SnsSuccessTopicName
+
+  SnsFailureTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Ref: SnsFailureTopicName
+
+  SnsSuccessTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint:
+        Ref: SnsSuccessTopicSubscriptionEmail
+      Protocol: email
+      TopicArn:
+        Ref: SnsSuccessTopic
+    Condition: SnsSuccessTopicSubscriptionEmailExists
+
+  SnsFailureTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint:
+        Ref: SnsFailureTopicSubscriptionEmail
+      Protocol: email
+      TopicArn:
+        Ref: SnsFailureTopic
+    Condition: SnsFailureTopicSubscriptionEmailExists
+
+  SnsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Sid: Sns Failure Topic Sid
+            Action:
+              - Sns:GetTopicAttributes
+              - Sns:SetTopicAttributes
+              - Sns:AddPermission
+              - Sns:RemovePermission
+              - Sns:DeleteTopic
+              - Sns:Subscribe
+              - Sns:ListSubscriptionsByTopic
+              - Sns:Publish
+            Principal:
+              AWS:
+                Fn::Sub: ${AWS::AccountId}
+            Resource:
+              - Ref: SnsFailureTopic
+            Condition:
+              StringEquals:
+                AWS:SourceOwner:
+                  Fn::Sub: ${AWS::AccountId}
+          - Effect: Allow
+            Sid: Sns Success Topic Sid
+            Action:
+              - Sns:GetTopicAttributes
+              - Sns:SetTopicAttributes
+              - Sns:AddPermission
+              - Sns:RemovePermission
+              - Sns:DeleteTopic
+              - Sns:Subscribe
+              - Sns:ListSubscriptionsByTopic
+              - Sns:Publish
+            Principal:
+              AWS:
+                Fn::Sub: ${AWS::AccountId}
+            Resource:
+              - Ref: SnsSuccessTopic
+            Condition:
+              StringEquals:
+                AWS:SourceOwner:
+                  Fn::Sub: ${AWS::AccountId}
+      Topics:
+        - Ref: SnsFailureTopic
+        - Ref: SnsSuccessTopic
+
+Outputs:
+  #=======================================================
+  #
+  #                 CloudFormation Outputs
+  #
+  #=======================================================
+  SnsSuccessTopicArn:
+    Description: ARN for Sns where the onboarding success events will be published
+    Value:
+      Fn::GetAtt:
+        - SnsSuccessTopic
+        - TopicArn
+
+  SnsFailureTopicArn:
+    Description: ARN for Sns where the onboarding failures will be published
+    Value:
+      Fn::GetAtt:
+        - SnsFailureTopic
+        - TopicArn

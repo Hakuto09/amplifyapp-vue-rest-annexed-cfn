@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create lambda for IoT Core to DynamoDB
+
+Parameters:
+  #=======================================================
+  #
+  #                   CloudFormation Parameters
+  #
+  #=======================================================
+  LambdaName:
+    Type: String
+    Default: IotcoreToDynaodb
+    Description: Lambda name
+  IotcorePolicyName:
+    Type: String
+    Description: Policy name
+  SnsFailureSummaryTopicArn:
+    Type: String
+    Description: SNS topic to post summary message on failure case
+  SnsSuccessSummaryTopicArn:
+    Type: String
+    Description: SNS topic to post summary message on success case
+  DynamodbDdataTableArn:
+    Description: DynamoDB Arn to store Device data.
+    Type: String
+  S3LocalBucketArn:
+    Description: Arn for S3 bucket used to store the lambda code on customers account.
+    Type: String
+  S3LocalBucketName:
+    Description: Name of S3 bucket used to store the lambda code on customers account.
+    Type: String
+  IotcoreToDynaodbLambdaZipPath:
+    Description: Zip path for the compressed folder with the lambda code located in local S3.
+    Type: String
+  SqsQueueArn:
+    Description: SQS queue Arn
+    Type: String
+
+Resources:
+  #=======================================================
+  #
+  #                   Lambda resources
+  #
+  #=======================================================
+  IotcoreToDynaodbLambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName:
+            Fn::Sub: iotcore-to-dynamodb-amplifyvuerest-hkt-policy-${AWS::Region}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:ChangeMessageVisibility
+                Resource:
+                  Ref: SqsQueueArn
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource:
+                  - Ref: SnsSuccessSummaryTopicArn
+                  - Ref: SnsFailureSummaryTopicArn
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource:
+                  Ref: DynamodbDdataTableArn
+              - Effect: Allow
+                Action:
+                  - iot:CreateKeysAndCertificate
+                  - iot:AttachPolicy
+                  - iot:CreateThing
+                  - iot:AttachThingPrincipal
+                  - iot:Publish
+                  - iot:DeleteThing
+                  - iot:DeleteCertificate
+                  - iot:UpdateCertificate
+                  - iot:DetachThingPrincipal
+                  - iot:DetachPolicy
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:GetBucketPolicy
+                  - S3:PutObjectTagging
+                Resource:
+                  - Fn::Sub: ${S3LocalBucketArn}/*
+                  - Ref: S3LocalBucketArn
+
+  IotcoreToDynaodbLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: IoT Core to DynamoDB
+      Environment:
+        Variables:
+          IOT_CORE_POLICY_NAME:
+            Ref: IotcorePolicyName
+          SNS_FAILURE_SUMMARY_TOPIC:
+            Ref: SnsFailureSummaryTopicArn
+          SNS_SUCCESS_SUMMARY_TOPIC:
+            Ref: SnsSuccessSummaryTopicArn
+      FunctionName:
+        Ref: LambdaName
+      Handler: index.handler
+      ## Reserve dedicated lambda executions to prevent IoT Core Throttling issues
+      ReservedConcurrentExecutions: 5
+      Architectures:
+        - x86_64
+      Code:
+        S3Bucket:
+          Ref: S3LocalBucketName
+        S3Key:
+          Ref: IotcoreToDynaodbLambdaZipPath
+      MemorySize: 128
+      Role:
+        Fn::GetAtt:
+          - IotcoreToDynaodbLambdaIAMRole
+          - Arn
+      Runtime: nodejs18.x
+      TracingConfig:
+        Mode: Active
+      EphemeralStorage:
+        Size: 512
+
+  IotcoreToDynaodbLambdaFunctionEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      Enabled: true
+      EventSourceArn:
+        Ref: SqsQueueArn
+      FunctionName:
+        Ref: LambdaName
+    DependsOn: IotcoreToDynaodbLambdaFunction

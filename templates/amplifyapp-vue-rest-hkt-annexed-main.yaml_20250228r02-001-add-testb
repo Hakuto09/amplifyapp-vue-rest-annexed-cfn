@@ -1,0 +1,292 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Main stack for amplifyapp-vue-rest-hkt-annexed.
+Parameters:
+  #=======================================================
+  #
+  #                   CloudFormation Parameters
+  #
+  #=======================================================
+  BranchEnv:
+    Type: String
+    AllowedValues:
+      - dev
+      - staging
+      - test
+      - testb
+    Description: BranchEnv for Amplify.
+
+  SnsSuccessTopicSubscriptionEmail:
+    Description: Email for Success Topic Subscription. Empty string or valid e-mail. Verbose !
+    Type: String
+    AllowedPattern: ^$|[^\s@]+@[^\s@]+\.[^\s@]+
+
+  SnsFailureTopicSubscriptionEmail:
+    Description: Email for Failure Topic Subscription. Empty string or valid e-mail.
+    Type: String
+    AllowedPattern: ^$|[^\s@]+@[^\s@]+\.[^\s@]+
+
+Mappings:
+  #=======================================================
+  #
+  #                   CloudFormation Mappings
+  #
+  #=======================================================
+  Configuration:
+    BaseConfiguration:
+      CodebaseVersion: replace_with_version
+      CodebaseBucket: replace_with_code_bucket_name
+      CodebaseBucketRegion: replace_with_code_bucket_region_name
+      SnsSuccessTopicName: replace_with_sns_success_topic_name
+      SnsFailureTopicName: replace_with_sns_failure_topic_name
+
+  BranchEnvConfig:
+    dev:
+      IotcoreToDynaodbLambdaZipFile: "lambda/iotcore-to-dynamodb_dev.zip"
+    staging:
+      IotcoreToDynaodbLambdaZipFile: "lambda/iotcore-to-dynamodb_staging.zip"
+    test:
+      IotcoreToDynaodbLambdaZipFile: "lambda/iotcore-to-dynamodb_test.zip"
+
+Resources:
+  #=======================================================
+  #
+  #                   CloudFormation stacks
+  #
+  #=======================================================
+  IotcorePolicyStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucket
+            - .s3-
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucketRegion
+            - .amazonaws.com/
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseVersion
+            - /iotcore-policy.yaml
+
+  SQSResourcesStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucket
+            - .s3-
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucketRegion
+            - .amazonaws.com/
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseVersion
+            - /sqs.yaml
+
+  CreateDynamodbTableStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        DynamodbAccountsTableName:
+          Fn::Join:
+            - ""
+            - - amplifyappvuerest-
+              - !Ref BranchEnv
+              - _accounts
+        DynamodbDdataTableName:
+          Fn::Join:
+            - ""
+            - - amplifyappvuerest-
+              - !Ref BranchEnv
+              - _ddata
+        DynamodbDevicesTableName:
+          Fn::Join:
+            - ""
+            - - amplifyappvuerest-
+              - !Ref BranchEnv
+              - _devices
+        DynamodbDgroupsTableName:
+          Fn::Join:
+            - ""
+            - - amplifyappvuerest-
+              - !Ref BranchEnv
+              - _dgroups
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucket
+            - .s3-
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucketRegion
+            - .amazonaws.com/
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseVersion
+            - /create-dynamodb-table.yaml
+
+  IotcoreToDynaodbLambdaStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        IotcorePolicyName:
+          Fn::GetAtt:
+            - IotcorePolicyStack
+            - Outputs.IotcorePolicyName
+        SnsFailureSummaryTopicArn:
+          Fn::GetAtt:
+            - SnsResourcesStack
+            - Outputs.SnsFailureTopicArn
+        SnsSuccessSummaryTopicArn:
+          Fn::GetAtt:
+            - SnsResourcesStack
+            - Outputs.SnsSuccessTopicArn
+        DynamodbDdataTableArn:
+          Fn::GetAtt:
+            - CreateDynamodbTableStack
+            - Outputs.DynamodbDdataTableArn
+        SqsQueueArn:
+          Fn::GetAtt:
+            - SQSResourcesStack
+            - Outputs.SqsQueueArn
+        S3LocalBucketArn:
+          Fn::GetAtt:
+            - S3BucketAndLocalFilesStack
+            - Outputs.LocalBucketArn
+        S3LocalBucketName:
+          Fn::GetAtt:
+            - S3BucketAndLocalFilesStack
+            - Outputs.LocalBucketName
+        IotcoreToDynaodbLambdaZipPath:
+          Fn::Join:
+            - ""
+            - - Fn::FindInMap:
+                  - Configuration
+                  - BaseConfiguration
+                  - CodebaseVersion
+              - /
+              - Fn::FindInMap:
+                  - BranchEnvConfig
+                  - !Ref BranchEnv
+                  - IotcoreToDynaodbLambdaZipFile
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucket
+            - .s3-
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucketRegion
+            - .amazonaws.com/
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseVersion
+            - /lambda-iotcore-to-dynaodb.yaml
+
+  SnsResourcesStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        SnsSuccessTopicName:
+          Fn::FindInMap:
+            - Configuration
+            - BaseConfiguration
+            - SnsSuccessTopicName
+        SnsFailureTopicName:
+          Fn::FindInMap:
+            - Configuration
+            - BaseConfiguration
+            - SnsFailureTopicName
+        SnsFailureTopicSubscriptionEmail:
+          Ref: SnsFailureTopicSubscriptionEmail
+        SnsSuccessTopicSubscriptionEmail:
+          Ref: SnsSuccessTopicSubscriptionEmail
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucket
+            - .s3-
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucketRegion
+            - .amazonaws.com/
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseVersion
+            - /sns.yaml
+
+  S3BucketAndLocalFilesStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        S3CodeOriginBucket:
+          Fn::FindInMap:
+            - Configuration
+            - BaseConfiguration
+            - CodebaseBucket
+        IotcoreToDynaodbLambdaZipPath:
+          Fn::Join:
+            - ""
+            - - Fn::FindInMap:
+                  - Configuration
+                  - BaseConfiguration
+                  - CodebaseVersion
+              - /
+              - Fn::FindInMap:
+                  - BranchEnvConfig
+                  - !Ref BranchEnv
+                  - IotcoreToDynaodbLambdaZipFile
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucket
+            - .s3-
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseBucketRegion
+            - .amazonaws.com/
+            - Fn::FindInMap:
+                - Configuration
+                - BaseConfiguration
+                - CodebaseVersion
+            - /s3-lambda-code.yaml
+
