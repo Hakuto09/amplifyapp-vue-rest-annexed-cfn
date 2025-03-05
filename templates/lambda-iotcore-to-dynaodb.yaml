@@ -12,10 +12,10 @@ Parameters:
     Type: String
     Resources:
 
-  LambdaName:
+  LambdabaseName:
     Type: String
     Default: IotcoreToDynaodb
-    Description: Lambda name
+    Description: Lambda base name
 
   IotcorePolicyName:
     Type: String
@@ -130,7 +130,8 @@ Resources:
           SNS_SUCCESS_SUMMARY_TOPIC:
             Ref: SnsSuccessSummaryTopicArn
       FunctionName:
-        Ref: LambdaName
+#        Ref: LambdaName
+        Fn:Sub: ${LambdabaseName}_${CodebaseName}
       Handler: index.handler
       ## Reserve dedicated lambda executions to prevent IoT Core Throttling issues
       ReservedConcurrentExecutions: 5
@@ -160,5 +161,6 @@ Resources:
       EventSourceArn:
         Ref: SqsQueueArn
       FunctionName:
-        Ref: LambdaName
-    DependsOn: IotcoreToDynaodbLambdaFunction
+#        Ref: LambdaName
+        Fn:Sub: ${LambdabaseName}_${CodebaseName}
+      DependsOn: IotcoreToDynaodbLambdaFunction
