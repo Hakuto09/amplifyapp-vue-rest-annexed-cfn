@@ -63,7 +63,8 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        CodebaseName: CodebaseName
+        CodebaseName:
+          Ref: CodebaseName
       TemplateURL:
         Fn::Join:
           - ""
@@ -88,7 +89,8 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        CodebaseName: CodebaseName
+        CodebaseName:
+          Ref: CodebaseName
       TemplateURL:
         Fn::Join:
           - ""
@@ -161,7 +163,8 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        CodebaseName: CodebaseName
+        CodebaseName:
+          Ref: CodebaseName
         IotcorePolicyName:
           Fn::GetAtt:
             - IotcorePolicyStack
@@ -226,7 +229,8 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        CodebaseName: CodebaseName
+        CodebaseName:
+          Ref: CodebaseName
         SnsSuccessTopicName:
           Fn::FindInMap:
             - Configuration
@@ -301,4 +305,3 @@ Resources:
                 - BaseConfiguration
                 - CodebaseVersion
             - /s3-lambda-code.yaml
-
