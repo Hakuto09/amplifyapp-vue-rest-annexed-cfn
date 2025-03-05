@@ -7,31 +7,44 @@ Parameters:
   #                   CloudFormation Parameters
   #
   #=======================================================
-  LambdaName:
+  CodebaseName:
+    Description: Project Name
+    Type: String
+    Resources:
+
+  LambdabaseName:
     Type: String
     Default: IotcoreToDynaodb
-    Description: Lambda name
+    Description: Lambda base name
+
   IotcorePolicyName:
     Type: String
     Description: Policy name
+
   SnsFailureSummaryTopicArn:
     Type: String
     Description: SNS topic to post summary message on failure case
+
   SnsSuccessSummaryTopicArn:
     Type: String
     Description: SNS topic to post summary message on success case
+
   DynamodbDdataTableArn:
     Description: DynamoDB Arn to store Device data.
     Type: String
+
   S3LocalBucketArn:
     Description: Arn for S3 bucket used to store the lambda code on customers account.
     Type: String
+
   S3LocalBucketName:
     Description: Name of S3 bucket used to store the lambda code on customers account.
     Type: String
+
   IotcoreToDynaodbLambdaZipPath:
     Description: Zip path for the compressed folder with the lambda code located in local S3.
     Type: String
+
   SqsQueueArn:
     Description: SQS queue Arn
     Type: String
@@ -58,7 +71,7 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
         - PolicyName:
-            Fn::Sub: iotcore-to-dynamodb-amplifyvuerest-hkt-policy-${AWS::Region}
+            Fn::Sub: hkt-iotcore-to-dynamodb-${CodebaseName}-${AWS::Region}
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -117,7 +130,8 @@ Resources:
           SNS_SUCCESS_SUMMARY_TOPIC:
             Ref: SnsSuccessSummaryTopicArn
       FunctionName:
-        Ref: LambdaName
+#        Ref: LambdaName
+        Fn:Sub: ${LambdabaseName}_${CodebaseName}
       Handler: index.handler
       ## Reserve dedicated lambda executions to prevent IoT Core Throttling issues
       ReservedConcurrentExecutions: 5
@@ -147,5 +161,6 @@ Resources:
       EventSourceArn:
         Ref: SqsQueueArn
       FunctionName:
-        Ref: LambdaName
-    DependsOn: IotcoreToDynaodbLambdaFunction
+#        Ref: LambdaName
+        Fn:Sub: ${LambdabaseName}_${CodebaseName}
+      DependsOn: IotcoreToDynaodbLambdaFunction
