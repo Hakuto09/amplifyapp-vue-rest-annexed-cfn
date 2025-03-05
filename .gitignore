@@ -5,5 +5,5 @@ __keep/
 build/
 dist/
 node_modules/
-
+venv/
 

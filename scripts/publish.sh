@@ -1,5 +1,9 @@
 #!/bin/bash
 
+project_name="amplifyapp-vue-rest-annexed-cfn"
+echo "project_name: $project_name"
+
+
 if [ -z "$1" ]; then
     echo "ERROR: No environment supplied"
     exit 1
@@ -36,7 +40,7 @@ aws s3 cp build s3://"$cfn_codebase_bucket"/"$version"/ --recursive || exit 1
 
 if [ -n "$3" ]; then
     echo "Publishing main template file to AWS S3 bucket $cfn_codebase_bucket folder 'latest'"
-    aws s3 cp build/amplifyapp-vue-rest-hkt-annexed-main.yaml s3://"$cfn_codebase_bucket"/latest/ || exit 1
+    aws s3 cp build/"$project_name"-main.yaml s3://"$cfn_codebase_bucket"/latest/ || exit 1
 fi
 
 echo "Templates publishing complete"

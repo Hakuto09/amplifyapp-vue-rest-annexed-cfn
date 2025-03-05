@@ -3,6 +3,10 @@
 echo "Check shell."
 echo $SHELL
 
+project_name="amplifyapp-vue-rest-annexed-cfn"
+echo "project_name: $project_name"
+
+
 os=$(uname | sed -n '/^Linux/p')
 if [ -z "$os" ]; then
     echo "ERROR: This script is only supported by Linux systems. Actual: $(uname)"
@@ -32,6 +36,7 @@ if ! which zip > /dev/null; then
 fi
 
 echo "Retrieving values from deploymentValues.yaml..."
+
 get_version=$(yq '.version' deploymentValues.yaml)
 version="${2:-$get_version}"
 if [ -z "$version" ]; then
@@ -39,21 +44,27 @@ if [ -z "$version" ]; then
     exit 1
 fi
 
-sns_success_topic_name=$(yq '.snsSuccessTopicName' deploymentValues.yaml)
-sns_failure_topic_name=$(yq '.snsFailureTopicName' deploymentValues.yaml)
-cfn_codebase_bucket=$(myenv=$branchenv yq '.[env(myenv)].codeBaseBucket' deploymentValues.yaml)
+cfn_codebase_name=$(myenv=$branchenv yq '.[env(myenv)].codeBaseName' deploymentValues.yaml)
+if [ -z "$cfn_codebase_name" ]; then
+    echo "ERROR: No codebase name provided in the deploymentValues.yaml for $branchenv env"
+    exit 1
+fi
 
+cfn_codebase_bucket=$(myenv=$branchenv yq '.[env(myenv)].codeBaseBucket' deploymentValues.yaml)
 if [ -z "$cfn_codebase_bucket" ]; then
     echo "ERROR: No codebase bucket provided in the deploymentValues.yaml for $branchenv env"
     exit 1
 fi
 
 cfn_codebase_bucket_region=$(myenv=$branchenv yq '.[env(myenv)].codeBaseBucketRegion' deploymentValues.yaml)
-
 if [ -z "$cfn_codebase_bucket_region" ]; then
     echo "ERROR: No codebase bucket region provided in the deploymentValues.yaml for $branchenv env"
     exit 1
 fi
+
+sns_success_topic_name=$(yq '.snsSuccessTopicName' deploymentValues.yaml)
+sns_failure_topic_name=$(yq '.snsFailureTopicName' deploymentValues.yaml)
+
 
 echo "Installing applications and zipping it..."
 cd applications || exit 1
@@ -64,7 +75,12 @@ pwd
 echo "installing..."
 cd src/iotcore-to-dynamodb_"$branchenv"
 pwd
-#python3 -m venv venv
+#python3.8 -m venv venv
+# or
+#python3.8 -m venv venv --without-pip
+#source venv/bin/activate
+#curl https://bootstrap.pypa.io/get-pip.py | python
+
 source venv/bin/activate
 pip install -r requirements.txt
 echo "Zipping..."
@@ -90,11 +106,12 @@ mkdir build/lambda
 #cp -r applications/dist/**/*.zip build/lambda/
 cp -r applications/dist/*.zip build/lambda/
 
-echo "Replacing values in the amplifyapp-vue-rest-hkt-annexed-main.yaml template..."
-sed -i s,replace_with_version,"$version",g build/amplifyapp-vue-rest-hkt-annexed-main.yaml
-sed -i s,replace_with_code_bucket_name,"$cfn_codebase_bucket",g build/amplifyapp-vue-rest-hkt-annexed-main.yaml
-sed -i s,replace_with_code_bucket_region_name,"$cfn_codebase_bucket_region",g build/amplifyapp-vue-rest-hkt-annexed-main.yaml
-sed -i s,replace_with_sns_success_topic_name,"$sns_success_topic_name",g build/amplifyapp-vue-rest-hkt-annexed-main.yaml
-sed -i s,replace_with_sns_failure_topic_name,"$sns_failure_topic_name",g build/amplifyapp-vue-rest-hkt-annexed-main.yaml
+echo "Replacing values in the $project_name-main.yaml template..."
+sed -i s,replace_with_version,"$version",g build/"$project_name"-main.yaml
+sed -i s,replace_with_codebase_name,"$cfn_codebase_name",g build/"$project_name"-main.yaml
+sed -i s,replace_with_codebase_bucket_name,"$cfn_codebase_bucket",g build/"$project_name"-main.yaml
+sed -i s,replace_with_codebase_bucket_region_name,"$cfn_codebase_bucket_region",g build/"$project_name"-main.yaml
+sed -i s,replace_with_sns_success_topic_name,"$sns_success_topic_name",g build/"$project_name"-main.yaml
+sed -i s,replace_with_sns_failure_topic_name,"$sns_failure_topic_name",g build/"$project_name"-main.yaml
 
 echo "Build complete"

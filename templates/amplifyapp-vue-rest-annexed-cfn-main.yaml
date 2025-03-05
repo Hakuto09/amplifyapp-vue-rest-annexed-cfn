@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Main stack for amplifyapp-vue-rest-hkt-annexed.
+Description: Main stack for amplifyapp-vue-rest-annexed-cfn.
 Parameters:
   #=======================================================
   #
@@ -13,6 +13,7 @@ Parameters:
       - staging
       - test
       - testb
+      - testaabe
     Description: BranchEnv for Amplify.
 
   SnsSuccessTopicSubscriptionEmail:
@@ -34,8 +35,9 @@ Mappings:
   Configuration:
     BaseConfiguration:
       CodebaseVersion: replace_with_version
-      CodebaseBucket: replace_with_code_bucket_name
-      CodebaseBucketRegion: replace_with_code_bucket_region_name
+      CodebaseName: replace_with_codebase_name
+      CodebaseBucket: replace_with_codebase_bucket_name
+      CodebaseBucketRegion: replace_with_codebase_bucket_region_name
       SnsSuccessTopicName: replace_with_sns_success_topic_name
       SnsFailureTopicName: replace_with_sns_failure_topic_name
 
@@ -46,6 +48,10 @@ Mappings:
       IotcoreToDynaodbLambdaZipFile: "lambda/iotcore-to-dynamodb_staging.zip"
     test:
       IotcoreToDynaodbLambdaZipFile: "lambda/iotcore-to-dynamodb_test.zip"
+    testb:
+      IotcoreToDynaodbLambdaZipFile: "lambda/iotcore-to-dynamodb_testb.zip"
+    testaabe:
+      IotcoreToDynaodbLambdaZipFile: "lambda/iotcore-to-dynamodb_testaabe.zip"
 
 Resources:
   #=======================================================
@@ -56,6 +62,8 @@ Resources:
   IotcorePolicyStack:
     Type: AWS::CloudFormation::Stack
     Properties:
+      Parameters:
+        CodebaseName: CodebaseName
       TemplateURL:
         Fn::Join:
           - ""
@@ -76,9 +84,11 @@ Resources:
                 - CodebaseVersion
             - /iotcore-policy.yaml
 
-  SQSResourcesStack:
+  SqsResourcesStack:
     Type: AWS::CloudFormation::Stack
     Properties:
+      Parameters:
+        CodebaseName: CodebaseName
       TemplateURL:
         Fn::Join:
           - ""
@@ -151,6 +161,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
+        CodebaseName: CodebaseName
         IotcorePolicyName:
           Fn::GetAtt:
             - IotcorePolicyStack
@@ -169,7 +180,7 @@ Resources:
             - Outputs.DynamodbDdataTableArn
         SqsQueueArn:
           Fn::GetAtt:
-            - SQSResourcesStack
+            - SqsResourcesStack
             - Outputs.SqsQueueArn
         S3LocalBucketArn:
           Fn::GetAtt:
@@ -215,6 +226,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
+        CodebaseName: CodebaseName
         SnsSuccessTopicName:
           Fn::FindInMap:
             - Configuration

@@ -13,6 +13,7 @@ Parameters:
       - staging
       - test
       - testb
+      - testaabe
     Description: BranchEnv for Amplify.
 
   SnsSuccessTopicSubscriptionEmail:
@@ -48,6 +49,8 @@ Mappings:
       IotcoreToDynaodbLambdaZipFile: "lambda/iotcore-to-dynamodb_test.zip"
     testb:
       IotcoreToDynaodbLambdaZipFile: "lambda/iotcore-to-dynamodb_testb.zip"
+    testaabe:
+      IotcoreToDynaodbLambdaZipFile: "lambda/iotcore-to-dynamodb_testaabe.zip"
 
 Resources:
   #=======================================================
